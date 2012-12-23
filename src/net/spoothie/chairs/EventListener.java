@@ -3,6 +3,7 @@ package net.spoothie.chairs;
 import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
+
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -14,11 +15,11 @@ import org.bukkit.event.Event.Result;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.material.Stairs;
 import org.bukkit.material.Step;
 
@@ -72,10 +73,10 @@ public class EventListener implements Listener {
             plugin.sit.remove(pName);
         }
     }
-    
+
     @EventHandler
     public void onBlockDestroy(BlockBreakEvent event) {
-        Block block = event.getBlock();    
+        Block block = event.getBlock();
         if (!plugin.sit.isEmpty()) {
             ArrayList<String> standList = new ArrayList<String>();
             for (String s : plugin.sit.keySet()) {
@@ -88,7 +89,7 @@ public class EventListener implements Listener {
                 plugin.sendStand(player);
             }
             standList.clear();
-        }       
+        }
     }
 
     @EventHandler
@@ -115,7 +116,7 @@ public class EventListener implements Listener {
             if (plugin.allowedBlocks.contains(block.getType())
                     || player.hasPermission("chairs.sit." + block.getTypeId())
                     || player.hasPermission("chairs.sit." + block.getType().toString()) ) {
-                
+
                 int chairwidth = 1;
 
                 // Check if block beneath chair is solid.
@@ -125,10 +126,10 @@ public class EventListener implements Listener {
                 if (block.getRelative(BlockFace.DOWN).isEmpty()) {
                     return;
                 }
-                if (!net.minecraft.server.v1_4_5.Block.byId[block.getTypeId()].material.isSolid()) {                   
+                if (!net.minecraft.server.v1_4_6.Block.byId[block.getTypeId()].material.isSolid()) {
                     return;
-                } 
-                
+                }
+
                 // Check if player is sitting.
                 if (plugin.sit.containsKey(event.getPlayer().getName())) {
                     plugin.sit.remove(player.getName());
@@ -238,7 +239,7 @@ public class EventListener implements Listener {
 
                     Timer timer = new Timer();
                     long delay = 1 * 2000;
-                    timer.schedule(new sendSitTask(), delay);                    
+                    timer.schedule(new sendSitTask(), delay);
                 }
             }
         }
