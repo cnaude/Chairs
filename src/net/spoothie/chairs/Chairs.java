@@ -6,20 +6,22 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import net.minecraft.server.v1_4_5.Packet40EntityMetadata;
+
+import net.minecraft.server.v1_4_6.Packet40EntityMetadata;
+
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.craftbukkit.v1_4_5.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_4_6.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class Chairs extends JavaPlugin {
 
-    public List<Material> allowedBlocks = new ArrayList<Material>();    
+    public List<Material> allowedBlocks = new ArrayList<Material>();
     public boolean sneaking, autoRotate, signCheck, permissions, notifyplayer, invertedStairCheck, seatOccupiedCheck, invertedStepCheck;
     public double sittingHeight, distance;
     public int maxChairWidth;
@@ -53,7 +55,7 @@ public class Chairs extends JavaPlugin {
             try {
                 pluginFolder.mkdir();
             } catch (Exception e) {
-                logInfo("ERROR: " + e.getMessage());                
+                logInfo("ERROR: " + e.getMessage());
             }
         }
 
@@ -66,7 +68,7 @@ public class Chairs extends JavaPlugin {
         }
     }
 
-    private void loadConfig() {       
+    private void loadConfig() {
         autoRotate = getConfig().getBoolean("auto-rotate");
         sneaking = getConfig().getBoolean("sneaking");
         signCheck = getConfig().getBoolean("sign-check");
@@ -111,15 +113,15 @@ public class Chairs extends JavaPlugin {
 
         return true;
     }
-    
+
     // Send sit packet to all online players
     public void sendSit(Player p) {
         Packet40EntityMetadata packet = new Packet40EntityMetadata(p.getPlayer().getEntityId(), new ChairWatcher((byte) 4), false);
         for (Player play : Bukkit.getOnlinePlayers()) {
-            ((CraftPlayer) play).getHandle().netServerHandler.sendPacket(packet);
+            ((CraftPlayer) play).getHandle().playerConnection.sendPacket(packet);
         }
     }
-    
+
     public void sendSit() {
         for (String s : sit.keySet()) {
             Player p = Bukkit.getPlayer(s);
@@ -128,21 +130,21 @@ public class Chairs extends JavaPlugin {
             }
         }
     }
-    
+
     // Send stand packet to all online players
     public void sendStand(Player p) {
         if (sit.containsKey(p.getName())) {
-            if (notifyplayer) {                
+            if (notifyplayer) {
                 p.sendMessage(ChatColor.GRAY + "You are no longer sitting.");
             }
             sit.remove(p.getName());
         }
         Packet40EntityMetadata packet = new Packet40EntityMetadata(p.getPlayer().getEntityId(), new ChairWatcher((byte) 0), false);
         for (Player play : Bukkit.getOnlinePlayers()) {
-            ((CraftPlayer) play).getHandle().netServerHandler.sendPacket(packet);
+            ((CraftPlayer) play).getHandle().playerConnection.sendPacket(packet);
         }
     }
-    
+
     public void logInfo(String _message) {
         log.log(Level.INFO, String.format("%s %s", LOG_HEADER, _message));
     }
@@ -150,5 +152,5 @@ public class Chairs extends JavaPlugin {
     public void logError(String _message) {
         log.log(Level.SEVERE, String.format("%s %s", LOG_HEADER, _message));
     }
-    
+
 }
