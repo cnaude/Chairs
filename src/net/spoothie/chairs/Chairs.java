@@ -49,11 +49,6 @@ public class Chairs extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        if (!checkForProtocolLib()) {
-            logError("This plugin requires ProtocolLib. Please download the latest: http://dev.bukkit.org/server-mods/protocollib/");
-            Bukkit.getServer().getPluginManager().disablePlugin(this);
-            return;
-        } 
         instance = this;
         ignoreList = new ChairsIgnoreList();
         ignoreList.load();
@@ -275,15 +270,6 @@ public class Chairs extends JavaPlugin {
     
     public static Chairs get() {
         return instance;
-    }
-    
-    public boolean checkForProtocolLib() {
-        Plugin plugin = getServer().getPluginManager().getPlugin("ProtocolLib");
-        if (plugin == null) {
-            return false;
-        } else {
-            return true;
-        }
     }
     
 }

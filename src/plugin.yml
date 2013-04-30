@@ -5,6 +5,7 @@ authors:
  - spoothie
  - cnaude
 main: net.spoothie.chairs.Chairs
+depend: [ProtocolLib]
 commands:
     chairs:
         description: Various commands for Chairs.
