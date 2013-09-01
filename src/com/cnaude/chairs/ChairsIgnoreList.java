@@ -9,18 +9,24 @@ import java.util.ArrayList;
 
 /**
  *
- * @author naudec
+ * @author cnaude
  */
 @SuppressWarnings("serial")
 public class ChairsIgnoreList implements Serializable{
     private static ArrayList<String> ignoreList = new ArrayList<String>();
     private static final String IGNORE_FILE = "plugins/Chairs/ignores.ser";
     
+    private Chairs plugin;
+    public ChairsIgnoreList(Chairs plugin)
+    {
+    	this.plugin = plugin;
+    }
+    
     @SuppressWarnings("unchecked")
     public void load() {        
         File file = new File(IGNORE_FILE);
         if (!file.exists()) {
-            Chairs.get().logInfo("Ignore file '"+file.getAbsolutePath()+"' does not exist.");
+        	plugin.logInfo("Ignore file '"+file.getAbsolutePath()+"' does not exist.");
             return;
         }
         try {                
@@ -28,10 +34,10 @@ public class ChairsIgnoreList implements Serializable{
             ObjectInputStream obj_in = new ObjectInputStream (f_in);
             ignoreList = (ArrayList<String>) obj_in.readObject();
             obj_in.close();               
-            Chairs.get().logInfo("Loaded ignore list. (Count = "+ignoreList.size()+")");
+            plugin.logInfo("Loaded ignore list. (Count = "+ignoreList.size()+")");
         }
         catch(Exception e) {
-          Chairs.get().logError(e.getMessage());
+        	plugin.logError(e.getMessage());
         }
     }
     
@@ -42,10 +48,10 @@ public class ChairsIgnoreList implements Serializable{
             ObjectOutputStream obj_out = new ObjectOutputStream (f_out);
             obj_out.writeObject (ignoreList);
             obj_out.close();
-            Chairs.get().logInfo("Saved ignore list. (Count = "+ignoreList.size()+")");
+            plugin.logInfo("Saved ignore list. (Count = "+ignoreList.size()+")");
         }
         catch(Exception e) {
-          Chairs.get().logError(e.getMessage());
+        	plugin.logError(e.getMessage());
         }
     }
     
