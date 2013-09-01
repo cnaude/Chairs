@@ -4,7 +4,6 @@
 # ------
 # allowed-blocks: Set the blocks you want to be able to sit down on. Use descriptive name or item ID. Use name:number to set sitting height.
 # auto-rotate: If set to true, you are automatically rotated to the descending face of the stairs-block when sitting down.
-# sneaking: If set to true, you have to sneak to sit down on a chair.
 # max-chair-width: Define how many blocks a chair can be long (set to number <= 0 for unlimited width).
 # sign-check: If set to true, you will only be able to sit down when there are signs on both of the ends of the chair.
 # distance: The maximum distance between the chair (the center of the block) and the player to be able to sit down (to prevent glitching through walls, etc.).
@@ -33,7 +32,6 @@ valid-signs:
   - SIGN_POST
   - ITEM_FRAME
 auto-rotate: true
-sneaking: true
 max-chair-width: 3
 sign-check: false
 distance: 2
@@ -61,5 +59,3 @@ messages:
   no-permission: '&cYou do not have permission to do this!'
   enabled: '&7You have enabled chairs for yourself!'
   disabled: '&7You have disabled chairs for yourself!'
-packet: 4
-    

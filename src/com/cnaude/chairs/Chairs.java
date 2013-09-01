@@ -3,26 +3,33 @@ package com.cnaude.chairs;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
-import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.event.HandlerList;
 import org.bukkit.permissions.Permission;
 import org.bukkit.permissions.PermissionDefault;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.util.Vector;
+
+import com.comphenix.protocol.ProtocolLibrary;
+import com.comphenix.protocol.ProtocolManager;
 
 public class Chairs extends JavaPlugin {
-    private static Chairs instance = null;
     public static ChairEffects chairEffects;
     public List<ChairBlock> allowedBlocks;
     public List<Material> validSigns;
-    public boolean sneaking, autoRotate, signCheck, permissions, notifyplayer, opsOverridePerms;
+    public boolean autoRotate, signCheck, permissions, notifyplayer, opsOverridePerms;
     public boolean invertedStairCheck, seatOccupiedCheck, invertedStepCheck, perItemPerms, ignoreIfBlockInHand;
     public boolean sitEffectsEnabled;
     public double sittingHeight, sittingHeightAdj, distance;
@@ -32,19 +39,16 @@ public class Chairs extends JavaPlugin {
     public int sitEffectInterval;
     private File pluginFolder;
     private File configFile;    
-    public byte sitByte;
-    public HashMap<String, Entity> sit = new HashMap<String, Entity>();
-    public static final String PLUGIN_NAME = "Chairs";
-    public static final String LOG_HEADER = "[" + PLUGIN_NAME + "]";
-    static final Logger log = Logger.getLogger("Minecraft");
+    private Logger log;
     public PluginManager pm;
     public static ChairsIgnoreList ignoreList; 
     public String msgSitting, msgStanding, msgOccupied, msgNoPerm, msgReloaded, msgDisabled, msgEnabled;
+    private ProtocolManager protocolManager;
 
     @Override
     public void onEnable() {
-        instance = this;
-        ignoreList = new ChairsIgnoreList();
+    	log = this.getLogger();
+        ignoreList = new ChairsIgnoreList(this);
         ignoreList.load();
         pm = this.getServer().getPluginManager();
         pluginFolder = getDataFolder();
@@ -59,16 +63,16 @@ public class Chairs extends JavaPlugin {
             logInfo("Enabling sitting effects.");
             chairEffects = new ChairEffects(this);
         }
+        protocolManager = ProtocolLibrary.getProtocolManager();
+        new PacketListener(protocolManager, this);
     }
 
     @Override
     public void onDisable() {
-        for (String pName : sit.keySet()) {
-            Player player = getServer().getPlayer(pName);
-            Location loc = player.getLocation().clone();
-            loc.setY(loc.getY() + 1);
-            player.teleport(loc, PlayerTeleportEvent.TeleportCause.PLUGIN);
-            
+    	protocolManager.removePacketListeners(this);
+    	protocolManager = null;
+        for (String pName : new HashSet<String>(sit.keySet())) {
+        	ejectPlayerOnDisable(Bukkit.getPlayerExact(pName));
         }
         if (ignoreList != null) {
             ignoreList.save();
@@ -76,6 +80,8 @@ public class Chairs extends JavaPlugin {
         if (chairEffects != null) {
             chairEffects.cancel();     
         }
+        HandlerList.unregisterAll(this);
+        log = null;
     }
     
     public void restartEffectsTask() {
@@ -102,15 +108,66 @@ public class Chairs extends JavaPlugin {
         }
     }
     
-    public boolean isProtocolLibLoaded() {
-        return (getServer().getPluginManager().getPlugin("ProtocolLib") != null);
+    protected HashMap<String, Entity> sit = new HashMap<String, Entity>();
+    protected HashMap<Block, String> sitblock = new HashMap<Block, String>();
+    protected HashMap<String, Block> sitblockbr = new HashMap<String, Block>();
+    protected HashMap<String, Location> sitstopteleportloc = new HashMap<String, Location>();
+    protected HashMap<String, Integer> sittask = new HashMap<String, Integer>();
+    protected void reSitPlayer(final Player player)
+    {
+    	player.eject();
+    	final Entity prevarrow = sit.get(player.getName());
+		Block block = sitblockbr.get(player.getName());
+		final Entity arrow = block.getWorld().spawnArrow(block.getLocation().add(0.5, 0, 0.5), new Vector(0, 0, 0), 0, 0);
+		arrow.setPassenger(player);
+		sit.put(player.getName(), arrow);
+		Bukkit.getScheduler().scheduleSyncDelayedTask(this, new Runnable()
+		{
+			public void run()
+			{
+				prevarrow.remove();
+			}
+		},40);
+    }
+    protected void ejectPlayer(final Player player)
+    {
+    	player.eject();
+    	final Location tploc = sitstopteleportloc.get(player.getName());
+    	if (tploc != null)
+    	{
+    		Bukkit.getScheduler().scheduleSyncDelayedTask(this, new Runnable(){
+    			public void run()
+    			{
+    	    		player.teleport(tploc);
+    			}
+    		},1);
+    	}
+    	unSit(player);
+    }
+    private void ejectPlayerOnDisable(Player player)
+    {
+    	player.eject();
+    	unSit(player);
+    }
+    protected void unSit(Player player) {
+    	if (sit.containsKey(player.getName()))
+    	{
+    		sit.get(player.getName()).remove();
+    		sitblock.remove(sitblockbr.get(player.getName()));
+    		sitblockbr.remove(player.getName());
+    		sitstopteleportloc.remove(player.getName());
+    		sit.remove(player.getName());
+    		Bukkit.getScheduler().cancelTask(sittask.get(player.getName()));
+    		sittask.remove(player.getName());
+    		if (notifyplayer && !msgStanding.isEmpty()) {
+            	player.sendMessage(msgStanding);
+        	}
+    	}
     }
 
-    public void loadConfig() {     
-        sitByte = Byte.parseByte(getConfig().getString("packet"));
-        logInfo("Sitting packet byte: " + sitByte);
+
+    public void loadConfig() {
         autoRotate = getConfig().getBoolean("auto-rotate");
-        sneaking = getConfig().getBoolean("sneaking");
         signCheck = getConfig().getBoolean("sign-check");
         sittingHeight = getConfig().getDouble("sitting-height");
         sittingHeightAdj = getConfig().getDouble("sitting-height-adj");
@@ -211,16 +268,13 @@ public class Chairs extends JavaPlugin {
     } 
     
     public void logInfo(String _message) {
-        log.log(Level.INFO, String.format("%s %s", LOG_HEADER, _message));
+        log.log(Level.INFO, _message);
     }
 
     public void logError(String _message) {
-        log.log(Level.SEVERE, String.format("%s %s", LOG_HEADER, _message));
+        log.log(Level.SEVERE, _message);
     }
     
-    public static Chairs get() {
-        return instance;
-    }
     
         
 }
