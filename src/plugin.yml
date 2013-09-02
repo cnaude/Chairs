@@ -1,11 +1,11 @@
 name: Chairs
-version: 3.0.0
+version: 3.0.1
 description: Let players sit on blocks.
 website: http://dev.bukkit.org/bukkit-plugins/chairsreloaded/
 authors: 
  - spoothie
  - cnaude
- - Shevchik
+ - _Shevchik_
 depend: [ProtocolLib]
 main: com.cnaude.chairs.Chairs
 commands:
