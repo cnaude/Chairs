@@ -32,6 +32,7 @@ public class Chairs extends JavaPlugin {
     public boolean autoRotate, signCheck, permissions, notifyplayer, opsOverridePerms;
     public boolean invertedStairCheck, seatOccupiedCheck, invertedStepCheck, perItemPerms, ignoreIfBlockInHand;
     public boolean sitEffectsEnabled;
+    public boolean authmelogincorrection;
     public double sittingHeight, sittingHeightAdj, distance;
     public int maxChairWidth;
     public int sitMaxHealth;
@@ -69,7 +70,7 @@ public class Chairs extends JavaPlugin {
 
     @Override
     public void onDisable() {
-    	protocolManager.removePacketListeners(this);
+    	protocolManager.getAsynchronousManager().unregisterAsyncHandlers(this);
     	protocolManager = null;
         for (String pName : new HashSet<String>(sit.keySet())) {
         	ejectPlayerOnDisable(Bukkit.getPlayerExact(pName));
@@ -127,7 +128,7 @@ public class Chairs extends JavaPlugin {
 			{
 				prevarrow.remove();
 			}
-		},40);
+		},100);
     }
     protected void ejectPlayer(final Player player)
     {
@@ -181,6 +182,8 @@ public class Chairs extends JavaPlugin {
         perItemPerms = getConfig().getBoolean("per-item-perms");
         opsOverridePerms = getConfig().getBoolean("ops-override-perms");
         ignoreIfBlockInHand = getConfig().getBoolean("ignore-if-block-in-hand");
+        
+        authmelogincorrection = getConfig().getBoolean("authme-loginlocation-correction");
         
         sitEffectsEnabled = getConfig().getBoolean("sit-effects.enabled", false);
         sitEffectInterval = getConfig().getInt("sit-effects.interval",20);

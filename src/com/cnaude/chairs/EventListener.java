@@ -14,6 +14,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.material.Stairs;
 import org.bukkit.material.Step;
@@ -54,7 +55,28 @@ public class EventListener implements Listener {
     }
     
     
-    @EventHandler(priority=EventPriority.MONITOR,ignoreCancelled=true)
+    @EventHandler(priority=EventPriority.LOWEST,ignoreCancelled=true)
+    public void onJoin(PlayerJoinEvent e)
+    {
+    	if (!plugin.authmelogincorrection)
+    	{
+    		return;
+    	}
+    	
+    	Player player = e.getPlayer();
+    	Location loc = player.getLocation();
+    	if (Double.isNaN(loc.getY()))
+    	{
+    		loc = player.getBedSpawnLocation();
+    		if (loc == null)
+    		{
+    			loc = player.getWorld().getSpawnLocation();
+    		}
+			player.teleport(loc);
+    	}
+    }
+    
+    @EventHandler(priority=EventPriority.LOWEST)
     public void onPlayerQuit(PlayerQuitEvent event)
     {
     	Player player = event.getPlayer();
@@ -296,7 +318,7 @@ public class EventListener implements Listener {
     		{
     			plugin.reSitPlayer(player);
     		}    	
-    	},1150,1150);
+    	},1000,1000);
     	plugin.sittask.put(player.getName(), task);
     }
     
