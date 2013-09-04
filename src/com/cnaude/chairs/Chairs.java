@@ -1,6 +1,7 @@
 package com.cnaude.chairs;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -12,7 +13,10 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
@@ -30,9 +34,8 @@ public class Chairs extends JavaPlugin {
     public List<ChairBlock> allowedBlocks;
     public List<Material> validSigns;
     public boolean autoRotate, signCheck, permissions, notifyplayer, opsOverridePerms;
-    public boolean invertedStairCheck, seatOccupiedCheck, invertedStepCheck, perItemPerms, ignoreIfBlockInHand;
+    public boolean invertedStairCheck, invertedStepCheck, perItemPerms, ignoreIfBlockInHand;
     public boolean sitEffectsEnabled;
-    public boolean authmelogincorrection;
     public double sittingHeight, sittingHeightAdj, distance;
     public int maxChairWidth;
     public int sitMaxHealth;
@@ -73,6 +76,7 @@ public class Chairs extends JavaPlugin {
     	protocolManager.getAsynchronousManager().unregisterAsyncHandlers(this);
     	protocolManager = null;
         for (String pName : new HashSet<String>(sit.keySet())) {
+        	savePlayerSitstoploc(pName);
         	ejectPlayerOnDisable(Bukkit.getPlayerExact(pName));
         }
         if (ignoreList != null) {
@@ -140,6 +144,7 @@ public class Chairs extends JavaPlugin {
     			public void run()
     			{
     	    		player.teleport(tploc);
+    	    		player.setSneaking(false);
     			}
     		},1);
     	}
@@ -167,6 +172,36 @@ public class Chairs extends JavaPlugin {
     }
 
 
+    protected void savePlayerSitstoploc(String player)
+    {
+    	FileConfiguration plconfig = new YamlConfiguration();
+    	Location sitstop = sitstopteleportloc.get(player);
+    	plconfig.set(player+".world", sitstop.getWorld().getName());
+    	plconfig.set(player+".xyz", sitstop.toVector());
+    	plconfig.set(player+".pitch", sitstop.getPitch());
+    	plconfig.set(player+".yaw", sitstop.getYaw());
+    	try {
+			plconfig.save(new File(getDataFolder(),"playersdata"+File.separator+player+".yml"));
+		} catch (IOException e) {
+		}
+    }
+    protected Location getPlayerSitstoploc(String player)
+    {
+    	File plfile = new File(getDataFolder(),"playersdata"+File.separator+player+".yml");
+    	if (plfile.exists()) 
+    	{
+    		FileConfiguration plconfig = YamlConfiguration.loadConfiguration(plfile);
+    		World world = Bukkit.getWorld(plconfig.getString(player+".world"));
+    		Vector xyz = plconfig.getVector(player+".xyz");
+    		Location sitstop = new Location(world,xyz.getX(),xyz.getY(),xyz.getZ());
+    		sitstop.setPitch((float) plconfig.getDouble(player+".pitch"));
+    		sitstop.setYaw((float) plconfig.getDouble(player+".yaw"));
+    		plfile.delete();
+    		return sitstop;
+    	}
+    	return null;
+    }
+
     public void loadConfig() {
         autoRotate = getConfig().getBoolean("auto-rotate");
         signCheck = getConfig().getBoolean("sign-check");
@@ -177,13 +212,10 @@ public class Chairs extends JavaPlugin {
         permissions = getConfig().getBoolean("permissions");
         notifyplayer = getConfig().getBoolean("notify-player");
         invertedStairCheck = getConfig().getBoolean("upside-down-check");
-        seatOccupiedCheck = getConfig().getBoolean("seat-occupied-check");
         invertedStepCheck = getConfig().getBoolean("upper-step-check");
         perItemPerms = getConfig().getBoolean("per-item-perms");
         opsOverridePerms = getConfig().getBoolean("ops-override-perms");
         ignoreIfBlockInHand = getConfig().getBoolean("ignore-if-block-in-hand");
-        
-        authmelogincorrection = getConfig().getBoolean("authme-loginlocation-correction");
         
         sitEffectsEnabled = getConfig().getBoolean("sit-effects.enabled", false);
         sitEffectInterval = getConfig().getInt("sit-effects.interval",20);

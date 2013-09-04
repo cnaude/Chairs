@@ -31,7 +31,6 @@ valid-signs:
   - WALL_SIGN
   - SIGN_POST
   - ITEM_FRAME
-authme-loginlocation-correction: false
 auto-rotate: true
 max-chair-width: 3
 sign-check: false
@@ -41,7 +40,6 @@ sitting-height-adj: 1.0
 permissions: true
 notify-player: true
 upside-down-check: true
-seat-occupied-check: true
 upper-step-check: true
 per-item-perms: true
 ops-override-perms: false

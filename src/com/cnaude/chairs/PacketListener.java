@@ -20,7 +20,6 @@ public class PacketListener {
 		falledPlayerDismountListener();
 	}
 	
-	
 	private void playerDismountListener()
 	{
 		pm.getAsynchronousManager().registerAsyncHandler(
@@ -50,7 +49,6 @@ public class PacketListener {
 		}).syncStart();
 	}
 	
-	
 	private void falledPlayerDismountListener()
 	{
 		pm.getAsynchronousManager().registerAsyncHandler(
@@ -76,7 +74,4 @@ public class PacketListener {
 		}).syncStart();
 	}
 	
-
-        
-
 }
