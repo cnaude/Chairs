@@ -32,47 +32,15 @@ public class EventListener implements Listener {
         this.plugin = plugin;
         this.ignoreList = ignoreList;
     }
-
-    public boolean isValidChair(Block block) {
-        for (ChairBlock cb : plugin.allowedBlocks) {
-            if (cb.getMat().equals(block.getType())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-
-    private boolean isSitting(Player player) {
-        if (player.isInsideVehicle()) {
-            if (plugin.sit.containsKey(player.getName())) {
-                return true;
-            }
-        } else if (plugin.sit.containsKey(player.getName())) {
-        	plugin.unSit(player);
-        }
-        return false;
-    }
-    
     
     @EventHandler(priority=EventPriority.LOWEST,ignoreCancelled=true)
     public void onJoin(PlayerJoinEvent e)
-    {
-    	if (!plugin.authmelogincorrection)
-    	{
-    		return;
-    	}
-    	
+    {    	
     	Player player = e.getPlayer();
-    	Location loc = player.getLocation();
-    	if (Double.isNaN(loc.getY()))
+    	Location loc = plugin.getPlayerSitstoploc(player.getName());
+    	if (loc != null)
     	{
-    		loc = player.getBedSpawnLocation();
-    		if (loc == null)
-    		{
-    			loc = player.getWorld().getSpawnLocation();
-    		}
-			player.teleport(loc);
+    		player.teleport(loc);
     	}
     }
     
@@ -82,6 +50,7 @@ public class EventListener implements Listener {
     	Player player = event.getPlayer();
     	if (plugin.sit.containsKey(player.getName()))
     	{
+    		plugin.savePlayerSitstoploc(player.getName());
     		plugin.ejectPlayer(player);
     	}
     }
@@ -96,6 +65,7 @@ public class EventListener implements Listener {
     		plugin.ejectPlayer(player);
     	}
     }
+    
 
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
@@ -108,30 +78,32 @@ public class EventListener implements Listener {
                 && plugin.ignoreIfBlockInHand) {
             return;
         }
-        if (event.hasBlock() && event.getAction() == Action.RIGHT_CLICK_BLOCK) {
-        	sitPlayer(player, event.getClickedBlock());
-        	if (sit) {
-        		event.setCancelled(true);
-        		sit = false;
+        if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+        	Block block = event.getClickedBlock();
+        	if (sitAllowed(player, block))
+        	{
+        		Location sitLocation = getSitLocation(block, player.getLocation().getYaw());
+            	sitPlayer(player, sitLocation);
+            	event.setCancelled(true);
         	}
         }
     }
-    private boolean sit = false;
-    protected void sitPlayer(Player player, Block block)
+
+
+    private boolean sitAllowed(Player player, Block block)
     {
         Stairs stairs = null;
         Step step = null;
         WoodenStep wStep = null;
-        double sh = plugin.sittingHeight;
         boolean blockOkay = false;
 
         if (ignoreList.isIgnored(player.getName())) {
-            return;
+            return false;
         }
         // Permissions Check
         if (plugin.permissions) {
             if (!player.hasPermission("chairs.sit")) {
-                return;
+                return false;
             }
         }
         if (plugin.perItemPerms) {
@@ -161,21 +133,24 @@ public class EventListener implements Listener {
             if (cb.getMat().toString().contains("STAIRS")) {
                 if (cb.getMat().equals(block.getType())) {
                     blockOkay = true;
-                    sh = cb.getSitHeight();
                     continue;
                 }
             } else if (cb.getMat().equals(block.getType())
                     && cb.getDamage() == block.getData()) {
                 blockOkay = true;
-                sh = cb.getSitHeight();
                 continue;
             }
         }
-        if (blockOkay
-                || (player.hasPermission("chairs.sit." + block.getTypeId() + ":" + block.getData()) && plugin.perItemPerms)
-                || (player.hasPermission("chairs.sit." + block.getType().toString() + ":" + block.getData()) && plugin.perItemPerms)
-                || (player.hasPermission("chairs.sit." + block.getTypeId()) && plugin.perItemPerms)
-                || (player.hasPermission("chairs.sit." + block.getType().toString()) && plugin.perItemPerms)) {
+        if (blockOkay ||
+        		(plugin.perItemPerms &&
+        				(
+        						player.hasPermission("chairs.sit." + block.getTypeId() + ":" + block.getData()) || 
+        						player.hasPermission("chairs.sit." + block.getType().toString() + ":" + block.getData()) ||
+        						player.hasPermission("chairs.sit." + block.getTypeId()) ||
+        						player.hasPermission("chairs.sit." + block.getType().toString())
+        				)
+        		)
+        	) {
 
             if (block.getState().getData() instanceof Stairs) {
                 stairs = (Stairs) block.getState().getData();
@@ -183,41 +158,39 @@ public class EventListener implements Listener {
                 step = (Step) block.getState().getData();
             } else if (block.getState().getData() instanceof WoodenStep) {
                 wStep = (WoodenStep) block.getState().getData();
-            } else {
-                sh += plugin.sittingHeightAdj;
             }
 
             int chairwidth = 1;
 
             // Check if block beneath chair is solid.
             if (block.getRelative(BlockFace.DOWN).isLiquid()) {
-                return;
+                return false;
             }
             if (block.getRelative(BlockFace.DOWN).isEmpty()) {
-                return;
+                return false;
             }
             if (!block.getRelative(BlockFace.DOWN).getType().isSolid()) {
-                return;
+                return false;
             }
 
             // Check for distance distance between player and chair.
             if (plugin.distance > 0 && player.getLocation().distance(block.getLocation().add(0.5, 0, 0.5)) > plugin.distance) {
-                return;
+                return false;
             }
 
             if (stairs != null) {
                 if (stairs.isInverted() && plugin.invertedStairCheck) {
-                    return;
+                    return false;
                 }
             }
             if (step != null) {
                 if (step.isInverted() && plugin.invertedStepCheck) {
-                    return;
+                    return false;
                 }
             }
             if (wStep != null) {
                 if (wStep.isInverted() && plugin.invertedStepCheck) {
-                    return;
+                    return false;
                 }
             }
             
@@ -235,7 +208,7 @@ public class EventListener implements Listener {
                 }
 
                 if (!(sign1 == true && sign2 == true)) {
-                    return;
+                    return false;
                 }
             }
 
@@ -250,66 +223,92 @@ public class EventListener implements Listener {
                 }
 
                 if (chairwidth > plugin.maxChairWidth) {
-                    return;
+                    return false;
                 }
             }
             
-            // Sit-down process.
-                if (plugin.seatOccupiedCheck) {
-                    if (!plugin.sit.isEmpty()) {
-                    	if (plugin.sitblock.containsKey(block))
-                    	{
-                    		if (!plugin.msgOccupied.isEmpty()) {
-                    			player.sendMessage(plugin.msgOccupied.replaceAll("%PLAYER%", plugin.sitblock.get(block)));
-                    		}
-                    		return;
-                    	}
-                    }
-                }
-
-                Location plocation = block.getLocation().clone();
-                plocation.add(0.5D, (sh - 0.5D), 0.5D);
-
-                // Rotate the player's view to the descending side of the block.
-                if (plugin.autoRotate && stairs != null) {
-                    switch (stairs.getDescendingDirection()) {
-                        case NORTH:
-                            plocation.setYaw(180);
-                            break;
-                        case EAST:
-                            plocation.setYaw(-90);
-                            break;
-                        case SOUTH:
-                            plocation.setYaw(0);
-                            break;
-                        case WEST:
-                            plocation.setYaw(90);
-					default:
-						;
-                    }
-                } else {
-                    plocation.setYaw(player.getLocation().getYaw());
-                }
-
-                if (plugin.notifyplayer && !plugin.msgSitting.isEmpty()) {
-                    player.sendMessage(plugin.msgSitting);
-                }
-
-                plugin.sitstopteleportloc.put(player.getName(), player.getLocation());
-                player.teleport(plocation);
-                Entity arrow = block.getWorld().spawnArrow(getBlockCentre(block).subtract(0, 0.5, 0), new Vector(0, 0, 0), 0, 0);
-                arrow.setPassenger(player);
-                player.setSneaking(false);
-                arrow.setTicksLived(1);
-                plugin.sit.put(player.getName(), arrow);
-                plugin.sitblock.put(block, player.getName());
-                plugin.sitblockbr.put(player.getName(), block);
-                startReSitTask(player);
-                sit = true;
+            //Sit occupied check
+            if (plugin.sitblock.containsKey(block))
+            {
+            	if (!plugin.msgOccupied.isEmpty()) {
+            		player.sendMessage(plugin.msgOccupied.replaceAll("%PLAYER%", plugin.sitblock.get(block)));
+            	}
+                return false;
+            }
+    		return true;
         }
+        
+        return false;
     }
     
-    protected void startReSitTask(final Player player)
+    private Location getSitLocation(Block block, Float playerYaw)
+    {
+        double sh = plugin.sittingHeight;
+        
+        for (ChairBlock cb : plugin.allowedBlocks) {
+            if (cb.getMat().toString().contains("STAIRS")) {
+                if (cb.getMat().equals(block.getType())) {
+                    sh = cb.getSitHeight();
+                    continue;
+                }
+            } else if (cb.getMat().equals(block.getType())
+                    && cb.getDamage() == block.getData()) {
+                sh = cb.getSitHeight();
+                continue;
+            }
+        }
+        
+        Stairs stairs = null;
+        if (block.getState().getData() instanceof Stairs) {
+            stairs = (Stairs) block.getState().getData();
+        } else {
+            sh += plugin.sittingHeightAdj;
+        }
+        
+        Location plocation = block.getLocation().clone();
+        plocation.add(0.5D, (sh - 0.5D), 0.5D);
+
+        // Rotate the player's view to the descending side of the block.
+        if (plugin.autoRotate && stairs != null) {
+            switch (stairs.getDescendingDirection()) {
+                case NORTH:
+                    plocation.setYaw(180);
+                    break;
+                case EAST:
+                    plocation.setYaw(-90);
+                    break;
+                case SOUTH:
+                    plocation.setYaw(0);
+                    break;
+                case WEST:
+                    plocation.setYaw(90);
+			default:
+				;
+            }
+        } else {
+            plocation.setYaw(playerYaw);
+        }
+		return plocation;
+    }
+    
+    
+    private void sitPlayer(Player player, Location sitlocation)
+    {
+        if (plugin.notifyplayer && !plugin.msgSitting.isEmpty()) {
+            player.sendMessage(plugin.msgSitting);
+        }
+        Block block = sitlocation.getBlock();
+        plugin.sitstopteleportloc.put(player.getName(), player.getLocation());
+        player.teleport(sitlocation);
+        player.setSneaking(false);
+        Entity arrow = block.getWorld().spawnArrow(block.getLocation().add(0.5, 0 , 0.5), new Vector(0, 0, 0), 0, 0);
+        arrow.setPassenger(player);
+        plugin.sit.put(player.getName(), arrow);
+        plugin.sitblock.put(block, player.getName());
+        plugin.sitblockbr.put(player.getName(), block);
+        startReSitTask(player);
+    }
+    private void startReSitTask(final Player player)
     {
     	int task = 
     	Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, new Runnable()
@@ -322,10 +321,24 @@ public class EventListener implements Listener {
     	plugin.sittask.put(player.getName(), task);
     }
     
+    private boolean isValidChair(Block block) {
+        for (ChairBlock cb : plugin.allowedBlocks) {
+            if (cb.getMat().equals(block.getType())) {
+                return true;
+            }
+        }
+        return false;
+    }
 
-    // https://github.com/sk89q/craftbook/blob/master/src/main/java/com/sk89q/craftbook/util/BlockUtil.java
-    public static Location getBlockCentre(Block block) {
-        return block.getLocation().add(0.5, 0.5, 0.5);
+    private boolean isSitting(Player player) {
+        if (plugin.sit.containsKey(player.getName())) {
+        	if (player.isInsideVehicle()) {
+        		return true;
+            } else {
+            	plugin.unSit(player);
+            }
+        }
+        return false;
     }
 
     private int getChairWidth(Block block, BlockFace face) {
