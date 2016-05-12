@@ -42,10 +42,10 @@ public class ChairsCommand implements CommandExecutor {
 			Player player = (Player) sender;
 			if (args[0].equalsIgnoreCase("off")) {
 				plugin.sitDisabled.add(player.getName());
-				player.sendMessage("Disabled sitting");
+				player.sendMessage(plugin.msgDisabled);
 			} else if (args[0].equalsIgnoreCase("on")) {
 				plugin.sitDisabled.remove(player.getName());
-				player.sendMessage("Enabled sitting");
+				player.sendMessage(plugin.msgEnabled);
 			}
 		}
 		return true;

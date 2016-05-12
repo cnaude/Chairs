@@ -27,4 +27,13 @@ public class CraftChairsArrow extends CraftArrow implements Vehicle {
 		super.remove();
 	}
 
+	@Override
+	public boolean isGlowing() {
+		return false;
+	}
+
+	@Override
+	public void setGlowing(boolean glowing) {
+	}
+
 }

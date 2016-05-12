@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -85,7 +86,7 @@ public class Chairs extends JavaPlugin {
 	@Override
 	public void onDisable() {
 		if (psitdata != null) {
-			for (Player player : Utils.getOnlinePlayers()) {
+			for (Player player : Bukkit.getOnlinePlayers()) {
 				if (psitdata.isSitting(player)) {
 					psitdata.unsitPlayerForce(player);
 				}
